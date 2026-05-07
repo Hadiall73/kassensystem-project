@@ -1,0 +1,44 @@
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase";
+
+export async function GET() {
+  const { data, error } = await supabaseAdmin
+    .from("pos_tables")
+    .select("*")
+    .order("number");
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ tables: data });
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { number, name, capacity } = body;
+  const { data, error } = await supabaseAdmin
+    .from("pos_tables")
+    .insert({ number, name, capacity: capacity || 4, status: "free" })
+    .select()
+    .single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ table: data });
+}
+
+export async function PATCH(req: NextRequest) {
+  const body = await req.json();
+  const { id, ...update } = body;
+  const { data, error } = await supabaseAdmin
+    .from("pos_tables")
+    .update(update)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ table: data });
+}
+
+export async function DELETE(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+  const { error } = await supabaseAdmin.from("pos_tables").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
