@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut, Plus, Minus, Trash2, Send, CreditCard, Banknote, X, ChefHat, Clock, CheckCircle } from "lucide-react";
 import type { PosTable, MenuItem, Category, Order, OrderItem } from "@/lib/supabase";
+import { OfflineSync } from "@/lib/supabase";
 
 interface CartItem { menu_item_id: string; name: string; price: number; quantity: number; note?: string; }
 
@@ -69,20 +70,36 @@ export default function KassePage() {
   async function sendOrder() {
     if (!selectedTable || cart.length === 0) return;
     setLoading(true);
-    await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        table_id: selectedTable.id,
-        table_number: selectedTable.number,
-        staff_name: staff?.name,
-        items: cart,
-      }),
-    });
-    setCart([]);
-    setLoading(false);
-    await selectTable(selectedTable);
-    setTables(prev => prev.map(t => t.id === selectedTable.id ? { ...t, status: "occupied" } : t));
+
+    const orderPayload = {
+      table_id: selectedTable.id,
+      table_number: selectedTable.number,
+      staff_name: staff?.name,
+      items: cart,
+    };
+
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderPayload),
+      });
+
+      if (!res.ok) throw new Error("Server Error");
+      
+      setCart([]);
+      setLoading(false);
+      await selectTable(selectedTable);
+      setTables(prev => prev.map(t => t.id === selectedTable.id ? { ...t, status: "occupied" } : t));
+    } catch (e) {
+      console.error("Order send failed, queuing locally...", e);
+      await OfflineSync.enqueueOrder(orderPayload);
+      setCart([]);
+      setLoading(false);
+      // Let the user know it's queued (Optional: you can add a toast here)
+      alert("Internet weg! Bestellung wurde lokal gespeichert und wird automatisch synchronisiert, sobald du wieder online bist.");
+      await selectTable(selectedTable);
+    }
   }
 
   async function payOrder(orderId: string, method: "cash" | "card") {
