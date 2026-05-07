@@ -7,6 +7,61 @@ const service = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 export const supabase = createClient(url, anon);
 export const supabaseAdmin = createClient(url, service);
 
+/**
+ * OFFLINE SYNC UTILITY
+ * Manages local storage of orders when internet is unavailable
+ */
+export const OfflineSync = {
+  QUEUE_KEY: 'openclaw_order_queue',
+
+  // Add order to local queue
+  async enqueueOrder(order: any) {
+    const queue = this.getQueue();
+    queue.push({ ...order, timestamp: new Date().toISOString(), synced: false });
+    localStorage.setItem(this.QUEUE_KEY, JSON.stringify(queue));
+    console.log('[OfflineSync] Order queued locally');
+  },
+
+  // Get all pending orders
+  getQueue() {
+    const data = localStorage.getItem(this.QUEUE_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  // Sync queued orders to Supabase
+  async syncOrders() {
+    if (!navigator.onLine) return;
+
+    const queue = this.getQueue();
+    if (queue.length === 0) return;
+
+    console.log(`[OfflineSync] Syncing ${queue.length} pending orders...`);
+    
+    const results = await Promise.all(
+      queue.map(async (order) => {
+        try {
+          const { error } = await supabase.from('pos_orders').insert(order);
+          if (error) throw error;
+          return { id: order.id, success: true };
+        } catch (e) {
+          return { id: order.id, success: false, error: e };
+        }
+      })
+    );
+
+    const remaining = queue.filter((_, index) => !results[index].success);
+    localStorage.setItem(this.QUEUE_KEY, JSON.stringify(remaining));
+    console.log(`[OfflineSync] Sync complete. ${queue.length - remaining.length} synced, ${remaining.length} failed.`);
+  },
+
+  // Setup listener for connectivity changes
+  init() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => this.syncOrders());
+    }
+  }
+};
+
 export type StaffRole = "chef" | "kellner" | "kueche";
 
 export interface Staff {
