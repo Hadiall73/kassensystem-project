@@ -7,6 +7,7 @@ import {
   Banknote, CreditCard, ShoppingBag
 } from "lucide-react";
 import type { PosTable, Category, MenuItem, Staff, PosSettings } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 
 type Tab = "dashboard" | "tables" | "menu" | "staff" | "settings";
 
@@ -42,11 +43,11 @@ export default function ChefPage() {
 
   async function loadAll() {
     const [tabRes, menuRes, staffRes, settingsRes, reportRes] = await Promise.all([
-      fetch("/api/tables").then(r => r.json()),
-      fetch("/api/menu").then(r => r.json()),
-      fetch("/api/staff").then(r => r.json()),
-      fetch("/api/settings").then(r => r.json()),
-      fetch("/api/reports").then(r => r.json()),
+      api("/api/tables").then(r => r.json()),
+      api("/api/menu").then(r => r.json()),
+      api("/api/staff").then(r => r.json()),
+      api("/api/settings").then(r => r.json()),
+      api("/api/reports").then(r => r.json()),
     ]);
     setTables(tabRes.tables || []);
     setCategories(menuRes.categories || []);
@@ -62,28 +63,26 @@ export default function ChefPage() {
   async function addTable() {
     if (!newTable.number) return;
     setSaving(true);
-    await fetch("/api/tables", {
+    await api("/api/tables", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ number: parseInt(newTable.number), name: newTable.name || null, capacity: parseInt(newTable.capacity) }),
     });
     setNewTable({ number: "", name: "", capacity: "4" });
     setSaving(false);
-    const res = await fetch("/api/tables").then(r => r.json());
+    const res = await api("/api/tables").then(r => r.json());
     setTables(res.tables || []);
   }
 
   async function deleteTable(id: string) {
-    await fetch(`/api/tables?id=${id}`, { method: "DELETE" });
+    await api(`/api/tables?id=${id}`, { method: "DELETE" });
     setTables(prev => prev.filter(t => t.id !== id));
   }
 
   async function addCategory() {
     if (!newCat.name) return;
     setSaving(true);
-    const res = await fetch("/api/menu", {
+    const res = await api("/api/menu", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "category", name: newCat.name, color: newCat.color, sort_order: categories.length }),
     });
     const json = await res.json();
@@ -93,16 +92,15 @@ export default function ChefPage() {
   }
 
   async function deleteCategory(id: string) {
-    await fetch(`/api/menu?id=${id}&type=category`, { method: "DELETE" });
+    await api(`/api/menu?id=${id}&type=category`, { method: "DELETE" });
     setCategories(prev => prev.filter(c => c.id !== id));
   }
 
   async function addMenuItem() {
     if (!newItem.name || !newItem.price) return;
     setSaving(true);
-    const res = await fetch("/api/menu", {
+    const res = await api("/api/menu", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: newItem.name,
         description: newItem.description || null,
@@ -119,25 +117,23 @@ export default function ChefPage() {
   }
 
   async function toggleItemAvailable(item: MenuItem) {
-    await fetch("/api/menu", {
+    await api("/api/menu", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: item.id, is_available: !item.is_available }),
     });
     setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_available: !i.is_available } : i));
   }
 
   async function deleteMenuItem(id: string) {
-    await fetch(`/api/menu?id=${id}`, { method: "DELETE" });
+    await api(`/api/menu?id=${id}`, { method: "DELETE" });
     setMenuItems(prev => prev.filter(i => i.id !== id));
   }
 
   async function addStaff() {
     if (!newStaff.name || !newStaff.pin) return;
     setSaving(true);
-    const res = await fetch("/api/staff", {
+    const res = await api("/api/staff", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newStaff),
     });
     const json = await res.json();
@@ -147,16 +143,15 @@ export default function ChefPage() {
   }
 
   async function deleteStaff(id: string) {
-    await fetch(`/api/staff?id=${id}`, { method: "DELETE" });
+    await api(`/api/staff?id=${id}`, { method: "DELETE" });
     setStaffList(prev => prev.filter(s => s.id !== id));
   }
 
   async function saveSettings() {
     if (!settings) return;
     setSaving(true);
-    const res = await fetch("/api/settings", {
+    const res = await api("/api/settings", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: settings.id, restaurant_name: editSettings.restaurant_name, table_count: parseInt(editSettings.table_count) }),
     });
     const json = await res.json();
@@ -199,7 +194,7 @@ export default function ChefPage() {
           })}
         </nav>
         <div className="p-3 border-t border-gray-800">
-          <button onClick={() => { sessionStorage.removeItem("pos_staff"); router.replace("/login"); }}
+          <button onClick={() => { sessionStorage.removeItem("pos_staff"); sessionStorage.removeItem("pos_staff_token"); router.replace("/login"); }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-all">
             <LogOut size={16} /> Abmelden
           </button>

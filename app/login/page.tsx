@@ -23,6 +23,7 @@ export default function LoginPage() {
     if (!res.ok) { setError("Falscher PIN"); setPin(""); return; }
     const staff = json.staff;
     sessionStorage.setItem("pos_staff", JSON.stringify(staff));
+    if (json.token) sessionStorage.setItem("pos_staff_token", json.token);
     if (staff.role === "chef") router.replace("/chef");
     else if (staff.role === "kueche") router.replace("/kueche");
     else router.replace("/kasse");
@@ -48,6 +49,7 @@ export default function LoginPage() {
     if (!res.ok) { setError("Falscher PIN"); setPin(""); return; }
     const staff = json.staff;
     sessionStorage.setItem("pos_staff", JSON.stringify(staff));
+    if (json.token) sessionStorage.setItem("pos_staff_token", json.token);
     if (staff.role === "chef") router.replace("/chef");
     else if (staff.role === "kueche") router.replace("/kueche");
     else router.replace("/kasse");

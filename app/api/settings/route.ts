@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { validateJson, isValidationError } from "@/lib/validate";
 import { settingsPatchSchema } from "@/lib/schemas";
+import { requireAuth, checkRole } from "@/lib/auth-server";
 import { z } from "zod";
 
 export async function GET() {
@@ -26,6 +27,10 @@ const settingsPatchWithIdSchema = settingsPatchSchema.extend({
 });
 
 export async function PATCH(req: NextRequest) {
+  const auth = requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
+  const denied = checkRole(auth, "chef");
+  if (denied) return denied;
   const parsed = await validateJson(req, settingsPatchWithIdSchema);
   if (isValidationError(parsed)) return parsed;
   const { id, ...update } = parsed;

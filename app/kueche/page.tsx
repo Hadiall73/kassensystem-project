@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, Clock, ChefHat, LogOut, Bell } from "lucide-react";
 import type { Order, OrderItem } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 
 export default function KuechePage() {
   const router = useRouter();
@@ -23,9 +24,9 @@ export default function KuechePage() {
   }, []);
 
   const loadOrders = useCallback(async () => {
-    const res = await fetch("/api/orders?status=open");
+    const res = await api("/api/orders?status=open");
     const json = await res.json();
-    const cooking = await fetch("/api/orders?status=cooking");
+    const cooking = await api("/api/orders?status=cooking");
     const cookingJson = await cooking.json();
     setOrders([...(json.orders || []), ...(cookingJson.orders || [])].sort(
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -33,27 +34,24 @@ export default function KuechePage() {
   }, []);
 
   async function markCooking(orderId: string) {
-    await fetch("/api/orders", {
+    await api("/api/orders", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: orderId, status: "cooking" }),
     });
     loadOrders();
   }
 
   async function markReady(orderId: string) {
-    await fetch("/api/orders", {
+    await api("/api/orders", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: orderId, status: "ready" }),
     });
     loadOrders();
   }
 
   async function markItemDone(itemId: string) {
-    await fetch("/api/orders", {
+    await api("/api/orders", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ item_id: itemId, item_status: "done" }),
     });
     loadOrders();
@@ -80,7 +78,7 @@ export default function KuechePage() {
           <span className={`text-xs font-semibold px-2 py-1 rounded-full ${orders.length > 0 ? "bg-orange-500/20 text-orange-400" : "bg-green-500/20 text-green-400"}`}>
             {orders.length} offen
           </span>
-          <button onClick={() => { sessionStorage.removeItem("pos_staff"); router.replace("/login"); }}
+          <button onClick={() => { sessionStorage.removeItem("pos_staff"); sessionStorage.removeItem("pos_staff_token"); router.replace("/login"); }}
             className="p-2 rounded-xl bg-gray-800 text-gray-400 hover:text-white">
             <LogOut size={16} />
           </button>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { LogOut, Plus, Minus, Trash2, Send, CreditCard, Banknote, X, ChefHat, Clock, CheckCircle } from "lucide-react";
 import type { PosTable, MenuItem, Category, Order, OrderItem } from "@/lib/supabase";
 import { OfflineSync } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 
 interface CartItem { menu_item_id: string; name: string; price: number; quantity: number; note?: string; }
 
@@ -33,8 +34,8 @@ export default function KassePage() {
 
   async function loadData() {
     const [tabRes, menuRes] = await Promise.all([
-      fetch("/api/tables").then(r => r.json()),
-      fetch("/api/menu").then(r => r.json()),
+      api("/api/tables").then(r => r.json()),
+      api("/api/menu").then(r => r.json()),
     ]);
     setTables(tabRes.tables || []);
     setCategories(menuRes.categories || []);
@@ -45,7 +46,7 @@ export default function KassePage() {
     setSelectedTable(t);
     setCart([]);
     setView("order");
-    const res = await fetch(`/api/orders?table_id=${t.id}`);
+    const res = await api(`/api/orders?table_id=${t.id}`);
     const json = await res.json();
     setTableOrders((json.orders || []).filter((o: Order) => o.status !== "paid"));
   }
@@ -79,9 +80,8 @@ export default function KassePage() {
     };
 
     try {
-      const res = await fetch("/api/orders", {
+      const res = await api("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderPayload),
       });
 
@@ -104,9 +104,8 @@ export default function KassePage() {
 
   async function payOrder(orderId: string, method: "cash" | "card") {
     setLoading(true);
-    await fetch("/api/orders", {
+    await api("/api/orders", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: orderId, status: "paid", payment_method: method }),
     });
     await selectTable(selectedTable!);
@@ -145,7 +144,7 @@ export default function KassePage() {
             <p className="text-gray-500 text-xs">{staff?.name} · Kellner</p>
           </div>
         </div>
-        <button onClick={() => { sessionStorage.removeItem("pos_staff"); router.replace("/login"); }}
+        <button onClick={() => { sessionStorage.removeItem("pos_staff"); sessionStorage.removeItem("pos_staff_token"); router.replace("/login"); }}
           className="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-all">
           <LogOut size={16} />
         </button>

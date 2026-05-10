@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { validateJson, isValidationError } from "@/lib/validate";
 import { orderCreateSchema, orderPatchSchema } from "@/lib/schemas";
+import { requireAuth } from "@/lib/auth-server";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -22,9 +23,13 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
   const parsed = await validateJson(req, orderCreateSchema);
   if (isValidationError(parsed)) return parsed;
-  const { table_id, table_number, staff_name, note, items } = parsed;
+  // staff_name aus Token bevorzugen (verhindert Spoofing)
+  const { table_id, table_number, note, items } = parsed;
+  const staff_name = auth.name;
 
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
@@ -58,9 +63,19 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const auth = requireAuth(req);
+  if (auth instanceof NextResponse) return auth;
   const parsed = await validateJson(req, orderPatchSchema);
   if (isValidationError(parsed)) return parsed;
   const { id, status, payment_method, item_id, item_status } = parsed;
+
+  // Stornieren / als bezahlt markieren ist nur fuer chef + kellner
+  if (status === "cancelled" && auth.role !== "chef" && auth.role !== "kellner") {
+    return NextResponse.json({ error: "Keine Storno-Berechtigung" }, { status: 403 });
+  }
+  if (payment_method && auth.role !== "chef" && auth.role !== "kellner") {
+    return NextResponse.json({ error: "Keine Zahlungs-Berechtigung" }, { status: 403 });
+  }
 
   if (item_id && item_status) {
     const { error } = await supabaseAdmin
