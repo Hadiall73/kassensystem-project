@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { validateJson, isValidationError } from "@/lib/validate";
+import { menuCreateSchema, menuPatchSchema } from "@/lib/schemas";
 
 export async function GET() {
   const [cats, items] = await Promise.all([
@@ -10,8 +12,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { type, ...data } = body;
+  const parsed = await validateJson(req, menuCreateSchema);
+  if (isValidationError(parsed)) return parsed;
+  const { type, ...data } = parsed;
 
   if (type === "category") {
     const { data: cat, error } = await supabaseAdmin
@@ -33,8 +36,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const body = await req.json();
-  const { id, type, ...update } = body;
+  const parsed = await validateJson(req, menuPatchSchema);
+  if (isValidationError(parsed)) return parsed;
+  const { id, type, ...update } = parsed;
 
   const table = type === "category" ? "pos_categories" : "pos_menu_items";
   const { data, error } = await supabaseAdmin
@@ -51,6 +55,12 @@ export async function DELETE(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   const type = searchParams.get("type");
+  if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+    return NextResponse.json({ error: "Ungueltige ID" }, { status: 400 });
+  }
+  if (type !== "category" && type !== "item") {
+    return NextResponse.json({ error: "type muss 'category' oder 'item' sein" }, { status: 400 });
+  }
   const table = type === "category" ? "pos_categories" : "pos_menu_items";
   const { error } = await supabaseAdmin.from(table).delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

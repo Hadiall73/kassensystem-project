@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { validateJson, isValidationError } from "@/lib/validate";
+import { orderCreateSchema, orderPatchSchema } from "@/lib/schemas";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -20,10 +22,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { table_id, table_number, staff_name, note, items } = body;
+  const parsed = await validateJson(req, orderCreateSchema);
+  if (isValidationError(parsed)) return parsed;
+  const { table_id, table_number, staff_name, note, items } = parsed;
 
-  const total = items.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0);
+  const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   const { data: order, error: orderErr } = await supabaseAdmin
     .from("pos_orders")
@@ -33,7 +36,7 @@ export async function POST(req: NextRequest) {
 
   if (orderErr) return NextResponse.json({ error: orderErr.message }, { status: 500 });
 
-  const orderItems = items.map((i: any) => ({
+  const orderItems = items.map((i) => ({
     order_id: order.id,
     menu_item_id: i.menu_item_id,
     name: i.name,
@@ -55,8 +58,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const body = await req.json();
-  const { id, status, payment_method, item_id, item_status } = body;
+  const parsed = await validateJson(req, orderPatchSchema);
+  if (isValidationError(parsed)) return parsed;
+  const { id, status, payment_method, item_id, item_status } = parsed;
 
   if (item_id && item_status) {
     const { error } = await supabaseAdmin
@@ -67,7 +71,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const update: any = {};
+  const update: Record<string, unknown> = {};
   if (status) update.status = status;
   if (payment_method) update.payment_method = payment_method;
   if (status === "paid") update.paid_at = new Date().toISOString();
@@ -75,7 +79,7 @@ export async function PATCH(req: NextRequest) {
   const { data: order, error } = await supabaseAdmin
     .from("pos_orders")
     .update(update)
-    .eq("id", id)
+    .eq("id", id!)
     .select()
     .single();
 

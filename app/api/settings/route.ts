@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { validateJson, isValidationError } from "@/lib/validate";
+import { settingsPatchSchema } from "@/lib/schemas";
+import { z } from "zod";
 
 export async function GET() {
   const { data, error } = await supabaseAdmin
@@ -18,9 +21,14 @@ export async function GET() {
   return NextResponse.json({ settings: data });
 }
 
+const settingsPatchWithIdSchema = settingsPatchSchema.extend({
+  id: z.string().trim().min(1).max(64),
+});
+
 export async function PATCH(req: NextRequest) {
-  const body = await req.json();
-  const { id, ...update } = body;
+  const parsed = await validateJson(req, settingsPatchWithIdSchema);
+  if (isValidationError(parsed)) return parsed;
+  const { id, ...update } = parsed;
   const { data, error } = await supabaseAdmin
     .from("pos_settings")
     .update(update)
