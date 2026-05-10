@@ -38,7 +38,7 @@ export const OfflineSync = {
     console.log(`[OfflineSync] Syncing ${queue.length} pending orders...`);
     
     const results = await Promise.all(
-      queue.map(async (order) => {
+      queue.map(async (order: any) => {
         try {
           const { error } = await supabase.from('pos_orders').insert(order);
           if (error) throw error;
@@ -49,7 +49,7 @@ export const OfflineSync = {
       })
     );
 
-    const remaining = queue.filter((_, index) => !results[index].success);
+    const remaining = queue.filter((_: any, index: number) => !results[index].success);
     localStorage.setItem(this.QUEUE_KEY, JSON.stringify(remaining));
     console.log(`[OfflineSync] Sync complete. ${queue.length - remaining.length} synced, ${remaining.length} failed.`);
   },
