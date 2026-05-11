@@ -1,0 +1,42 @@
+# Dependabot configuration — Layer 7 (Dependency-Firewall)
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      # Next.js + React zusammenfassen (oft tied together)
+      next-react:
+        applies-to: version-updates
+        patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+          - "eslint-config-next"
+          - "@types/react*"
+      patch-updates:
+        applies-to: version-updates
+        update-types: ["patch"]
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "ci"
+    commit-message:
+      prefix: "ci"
