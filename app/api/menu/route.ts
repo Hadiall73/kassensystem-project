@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { validateJson, isValidationError } from "@/lib/validate";
 import { menuCreateSchema, menuPatchSchema } from "@/lib/schemas";
 import { requireAuth, checkRole } from "@/lib/auth-server";
+import { auditAction } from "@/lib/audit-log";
 
 function requireChef(req: NextRequest) {
   const auth = requireAuth(req);
@@ -77,5 +78,9 @@ export async function DELETE(req: NextRequest) {
   const table = type === "category" ? "pos_categories" : "pos_menu_items";
   const { error } = await supabaseAdmin.from(table).delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // auth ist hier StaffPayload (durch requireChef-Helper)
+  if (!(auth instanceof NextResponse)) {
+    auditAction(req, auth, type === "category" ? "MENU_CATEGORY_DELETE" : "MENU_ITEM_DELETE", `${type}#${id}`, {});
+  }
   return NextResponse.json({ ok: true });
 }

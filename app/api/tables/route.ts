@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { validateJson, isValidationError } from "@/lib/validate";
 import { tableCreateSchema, tablePatchSchema } from "@/lib/schemas";
 import { requireAuth, checkRole } from "@/lib/auth-server";
+import { auditAction } from "@/lib/audit-log";
 
 export async function GET() {
   const { data, error } = await supabaseAdmin
@@ -69,5 +70,6 @@ export async function DELETE(req: NextRequest) {
   }
   const { error } = await supabaseAdmin.from("pos_tables").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  auditAction(req, auth, "TABLE_DELETE", `Table#${id}`, {});
   return NextResponse.json({ ok: true });
 }

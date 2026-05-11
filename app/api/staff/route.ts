@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { validateJson, isValidationError } from "@/lib/validate";
 import { staffPostSchema, staffPatchSchema } from "@/lib/schemas";
 import { requireAuth, checkRole, issueStaffToken } from "@/lib/auth-server";
+import { auditAction, auditSecurity } from "@/lib/audit-log";
 
 /**
  * GET /api/staff — Liste aller Mitarbeiter (NUR chef-Rolle, ohne PIN)
@@ -40,11 +41,18 @@ export async function POST(req: NextRequest) {
       .eq("is_active", true)
       .single();
     if (error || !data) {
+      auditSecurity(req, null, "LOGIN_FAILED", null, {
+        reason: "wrong_pin",
+        pinPrefix: pin?.slice(0, 1) + "***",
+      });
       return NextResponse.json({ error: "Falscher PIN" }, { status: 401 });
     }
     const token = issueStaffToken({
       id: data.id,
       name: data.name,
+      role: data.role,
+    });
+    auditAction(req, { id: data.id, name: data.name, role: data.role, type: "access" }, "LOGIN_SUCCESS", `Staff#${data.id}`, {
       role: data.role,
     });
     return NextResponse.json({
@@ -67,6 +75,7 @@ export async function POST(req: NextRequest) {
     .select("id, name, role, is_active")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  auditAction(req, auth, "CREATE_STAFF", `Staff#${data.id}`, { name, role });
   return NextResponse.json({ staff: data });
 }
 
@@ -96,6 +105,7 @@ export async function PATCH(req: NextRequest) {
     .select("id, name, role, is_active")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  auditAction(req, auth, "UPDATE_STAFF", `Staff#${id}`, update);
   return NextResponse.json({ staff: data });
 }
 
@@ -119,5 +129,6 @@ export async function DELETE(req: NextRequest) {
   }
   const { error } = await supabaseAdmin.from("pos_staff").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  auditAction(req, auth, "DELETE_STAFF", `Staff#${id}`, {});
   return NextResponse.json({ ok: true });
 }

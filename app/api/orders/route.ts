@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { validateJson, isValidationError } from "@/lib/validate";
 import { orderCreateSchema, orderPatchSchema } from "@/lib/schemas";
 import { requireAuth } from "@/lib/auth-server";
+import { auditAction, auditSecurity } from "@/lib/audit-log";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -71,9 +72,11 @@ export async function PATCH(req: NextRequest) {
 
   // Stornieren / als bezahlt markieren ist nur fuer chef + kellner
   if (status === "cancelled" && auth.role !== "chef" && auth.role !== "kellner") {
+    auditSecurity(req, auth, "PERMISSION_DENIED", `Order#${id}`, { kind: "cancel", role: auth.role });
     return NextResponse.json({ error: "Keine Storno-Berechtigung" }, { status: 403 });
   }
   if (payment_method && auth.role !== "chef" && auth.role !== "kellner") {
+    auditSecurity(req, auth, "PERMISSION_DENIED", `Order#${id}`, { kind: "payment", role: auth.role });
     return NextResponse.json({ error: "Keine Zahlungs-Berechtigung" }, { status: 403 });
   }
 
@@ -99,6 +102,16 @@ export async function PATCH(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Audit-Log fuer wichtige Status-Wechsel
+  if (status === "cancelled") {
+    auditAction(req, auth, "ORDER_CANCEL", `Order#${id}`, { total: order.total });
+  } else if (status === "paid") {
+    auditAction(req, auth, "ORDER_PAID", `Order#${id}`, {
+      total: order.total,
+      payment_method,
+    });
+  }
 
   // Free up table when paid
   if (status === "paid" && order.table_id) {
