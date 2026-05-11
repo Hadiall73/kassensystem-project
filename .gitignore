@@ -22,7 +22,12 @@
 
 # misc
 .DS_Store
+
+# TLS certs (lokal mit mkcert generiert — niemals committen!)
 *.pem
+*.key
+*.cert
+/certs/
 
 # debug
 npm-debug.log*
