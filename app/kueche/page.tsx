@@ -98,17 +98,31 @@ export default function KuechePage() {
               <div key={order.id}
                 className={`bg-gray-900 rounded-2xl border-2 overflow-hidden ${order.status === "cooking" ? "border-yellow-500/50" : "border-orange-500/50"}`}>
                 {/* Order Header */}
-                <div className={`px-4 py-3 flex items-center justify-between ${order.status === "cooking" ? "bg-yellow-500/10" : "bg-orange-500/10"}`}>
+                <div className={`px-4 py-3 flex items-center justify-between ${order.is_takeaway ? "bg-purple-500/20" : order.status === "cooking" ? "bg-yellow-500/10" : "bg-orange-500/10"}`}>
                   <div>
-                    <p className="text-white font-black text-lg">Tisch {order.table_number}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-white font-black text-lg">
+                        {order.is_takeaway ? "🥡 AUSSER HAUS" : `Tisch ${order.table_number}`}
+                      </p>
+                    </div>
+                    {order.is_takeaway && order.table_number && (
+                      <p className="text-purple-300 text-xs">Tisch {order.table_number}</p>
+                    )}
                     <div className="flex items-center gap-1 text-gray-400 text-xs mt-0.5">
                       <Clock size={12} />
                       <span>{elapsed(order.created_at)}</span>
                     </div>
                   </div>
-                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${order.status === "cooking" ? "bg-yellow-500/20 text-yellow-400" : "bg-orange-500/20 text-orange-400"}`}>
-                    {order.status === "cooking" ? "In Zubereitung" : "Neu"}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    {order.is_takeaway && (
+                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-purple-500/30 text-purple-300 border border-purple-500/50">
+                        🥡 Mitnehmen
+                      </span>
+                    )}
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${order.status === "cooking" ? "bg-yellow-500/20 text-yellow-400" : "bg-orange-500/20 text-orange-400"}`}>
+                      {order.status === "cooking" ? "In Zubereitung" : "Neu"}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Items */}

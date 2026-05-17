@@ -106,9 +106,24 @@ export interface Order {
   total: number;
   note?: string;
   staff_name?: string;
+  is_takeaway?: boolean;
   created_at: string;
   paid_at?: string;
   order_items?: OrderItem[];
+}
+
+export interface Reservation {
+  id: string;
+  guest_name: string;
+  guest_phone?: string;
+  guest_count: number;
+  table_id?: string;
+  table_number?: number;
+  date: string;
+  time: string;
+  note?: string;
+  status: "confirmed" | "cancelled" | "arrived";
+  created_at: string;
 }
 
 export interface OrderItem {

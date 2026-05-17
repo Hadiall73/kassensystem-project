@@ -42,6 +42,7 @@ export const orderCreateSchema = z.object({
   table_number: z.union([z.string(), z.number()]).optional(),
   staff_name: safeString(80).optional(),
   note: safeString(300).nullish(),
+  is_takeaway: z.boolean().optional(),
   items: z.array(orderItemSchema).min(1).max(100),
 });
 
@@ -138,6 +139,26 @@ export const tablePatchSchema = z
     status: z.enum(TABLE_STATUS).optional(),
   })
   .refine((o) => Object.keys(o).length > 1, "Mindestens ein Feld neben id");
+
+/* ── Reservierungen ──────────────────────────────────────────────── */
+const RESERVATION_STATUS = ["confirmed", "cancelled", "arrived"] as const;
+
+export const reservationCreateSchema = z.object({
+  guest_name:   safeString(120),
+  guest_phone:  safeString(30).optional(),
+  guest_count:  positiveInt,
+  table_id:     id.optional(),
+  table_number: z.union([z.string(), z.number()]).optional(),
+  date:         z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Datum im Format YYYY-MM-DD"),
+  time:         z.string().regex(/^\d{2}:\d{2}$/, "Zeit im Format HH:MM"),
+  note:         safeString(300).nullish(),
+});
+
+export const reservationPatchSchema = z.object({
+  id:     id,
+  status: z.enum(RESERVATION_STATUS).optional(),
+  note:   safeString(300).nullish(),
+}).refine((o) => Object.keys(o).length > 1, "Mindestens ein Feld neben id");
 
 /* ── Settings ────────────────────────────────────────────────────── */
 export const settingsPatchSchema = z.object({

@@ -29,14 +29,14 @@ export async function POST(req: NextRequest) {
   const parsed = await validateJson(req, orderCreateSchema);
   if (isValidationError(parsed)) return parsed;
   // staff_name aus Token bevorzugen (verhindert Spoofing)
-  const { table_id, table_number, note, items } = parsed;
+  const { table_id, table_number, note, items, is_takeaway } = parsed;
   const staff_name = auth.name;
 
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   const { data: order, error: orderErr } = await supabaseAdmin
     .from("pos_orders")
-    .insert({ table_id, table_number, staff_name, note, total, status: "open" })
+    .insert({ table_id, table_number, staff_name, note, total, status: "open", is_takeaway: is_takeaway ?? false })
     .select()
     .single();
 
