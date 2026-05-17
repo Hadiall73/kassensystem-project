@@ -193,7 +193,11 @@ export default function ChefPage() {
             );
           })}
         </nav>
-        <div className="p-3 border-t border-gray-800">
+        <div className="p-3 border-t border-gray-800 space-y-1">
+          <button onClick={() => router.push("/kasse")}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-orange-400 hover:bg-orange-500/20 transition-all">
+            <ShoppingBag size={16} /> Zur Kasse
+          </button>
           <button onClick={() => { sessionStorage.removeItem("pos_staff"); sessionStorage.removeItem("pos_staff_token"); router.replace("/login"); }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-all">
             <LogOut size={16} /> Abmelden

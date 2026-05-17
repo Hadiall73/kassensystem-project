@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   LogOut, Plus, Minus, Send, CreditCard, Banknote, X,
   Clock, CalendarDays, ShoppingBag, Users, Phone, ChevronLeft,
-  CheckCircle, Ban,
+  CheckCircle, Ban, ChefHat,
 } from "lucide-react";
 import type { PosTable, MenuItem, Category, Order, OrderItem, Reservation } from "@/lib/supabase";
 import { OfflineSync } from "@/lib/supabase";
@@ -47,7 +47,6 @@ export default function KassePage() {
     const s = sessionStorage.getItem("pos_staff");
     if (!s) { router.replace("/login"); return; }
     const parsed = JSON.parse(s);
-    if (parsed.role === "chef")   { router.replace("/chef");   return; }
     if (parsed.role === "kueche") { router.replace("/kueche"); return; }
     setStaff(parsed);
     loadData();
@@ -197,7 +196,9 @@ export default function KassePage() {
               {view === "order" && selectedTable ? `Tisch ${selectedTable.number}` :
                view === "reservierungen" ? "Reservierungen" : "Kassensystem"}
             </p>
-            <p className="text-gray-500 text-xs">{staff?.name} · Kellner</p>
+            <p className="text-gray-500 text-xs">
+              {staff?.name} · {staff?.role === "chef" ? "Chef" : "Kellner"}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -212,6 +213,12 @@ export default function KassePage() {
                 <CalendarDays size={13} /> Reservierungen
               </button>
             </>
+          )}
+          {staff?.role === "chef" && (
+            <button onClick={() => router.push("/chef")}
+              className="p-2 rounded-xl bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 transition-all" title="Chef-Panel">
+              <ChefHat size={16} />
+            </button>
           )}
           <button onClick={() => { sessionStorage.removeItem("pos_staff"); sessionStorage.removeItem("pos_staff_token"); router.replace("/login"); }}
             className="p-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-all">
